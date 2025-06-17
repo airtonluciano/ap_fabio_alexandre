@@ -4,38 +4,52 @@
   <meta charset="UTF-8">
   <title>Extrator de Convidados - Requerimentos</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <style>
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Extrator de Convidados</h1>
+<body class="bg-gray-100 text-gray-800 font-sans">
+  <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <h1 class="text-2xl font-bold mb-4">Extrator de Convidados</h1>
 
-  <h3>1. Enviar arquivos PDF</h3>
-  <form id="upload-form" enctype="multipart/form-data">
-    <input type="file" name="files[]" multiple accept=".pdf" />
-    <button type="submit">Enviar</button>
-  </form>
+    <h3 class="text-xl font-semibold mt-6 mb-3">1. Enviar arquivos PDF</h3>
+    <form id="upload-form" enctype="multipart/form-data" class="mb-4">
+      <label class="block mb-2 text-sm font-medium text-gray-900" for="file_input">Selecione os arquivos PDF</label>
+      <input class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" id="file_input" type="file" name="files[]" multiple accept=".pdf" />
+      <button type="submit" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors">Enviar</button>
+    </form>
 
-  <div id="upload-result"></div>
+    <div id="upload-progress-section" class="mt-4" style="display: none;">
+      <p id="upload-status-message" class="text-sm font-medium text-gray-700 mb-1">Enviando...</p>
+      <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+        <div id="upload-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+      <p id="upload-percentage" class="text-sm text-blue-600 mt-1">0%</p>
+    </div>
 
-  <h3>2. Escolher modelo</h3>
-  <select id="model-select">
-    {% for model in models %}
-      <option value="{{ model.id }}">{{ model.name }}</option>
-    {% endfor %}
-  </select>
+    <div id="upload-result" class="mt-4 p-4 bg-white rounded-md shadow" style="display: none;"></div>
 
-  <h3>3. Processar convidados</h3>
-  <button id="process-btn">Processar</button>
+    <h3 class="text-xl font-semibold mt-6 mb-3">2. Escolher modelo</h3>
+    <select id="model-select" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-4">
+      {% for model in models %}
+        <option value="{{ model.id }}">{{ model.name }}</option>
+      {% endfor %}
+    </select>
 
-  <h3>4. Exportar para Excel</h3>
-  <button id="export-btn">Exportar</button>
+    <h3 class="text-xl font-semibold mt-6 mb-3">3. Processar convidados</h3>
+    <button id="process-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors mb-4">Processar</button>
 
-  <h3>Resultado</h3>
-  <div id="result-table"></div>
+    <div id="processing-indicator" class="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-md" style="display: none;">
+      <p>Processando convidados... Por favor, aguarde.</p>
+    </div>
+
+    <div id="process-message-area" class="mt-4 p-3 rounded-md" style="display: none;"></div>
+
+
+    <h3 class="text-xl font-semibold mt-6 mb-3">4. Exportar para Excel</h3>
+    <button id="export-btn" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md transition-colors mb-4">Exportar</button>
+
+    <h3 class="text-xl font-semibold mt-6 mb-3">Resultado</h3>
+    <div id="result-table" class="mt-4 bg-white rounded-md shadow overflow-x-auto"></div>
+  </div>
 
   <script>
     let uploadedFiles = [];
@@ -43,25 +57,85 @@
     $('#upload-form').submit(function(e) {
       e.preventDefault();
       const formData = new FormData(this);
+
+      // Show progress bar and reset state
+      $('#upload-progress-section').show();
+      $('#upload-progress-bar').css('width', '0%').removeClass('bg-red-500').addClass('bg-blue-600');
+      $('#upload-percentage').text('0%').removeClass('text-red-500').addClass('text-blue-600');
+      $('#upload-status-message').text('Enviando...').removeClass('text-red-500').addClass('text-gray-700');
+      $('#upload-result').hide(); // Hide previous results
+
       $.ajax({
         url: '/upload',
         method: 'POST',
         data: formData,
         contentType: false,
         processData: false,
+        xhr: function() {
+          var xhr = new window.XMLHttpRequest();
+          xhr.upload.addEventListener('progress', function(evt) {
+            if (evt.lengthComputable) {
+              var percentComplete = Math.round((evt.loaded / evt.total) * 100);
+              $('#upload-progress-bar').css('width', percentComplete + '%');
+              $('#upload-percentage').text(percentComplete + '%');
+              if (percentComplete === 100) {
+                $('#upload-status-message').text('Processando arquivos no servidor...');
+              } else {
+                $('#upload-status-message').text('Enviando...');
+              }
+            }
+          }, false);
+          return xhr;
+        },
         success: function(res) {
           uploadedFiles = res.uploaded;
-          $('#upload-result').html('Arquivos enviados: ' + uploadedFiles.join(', '));
+          $('#upload-status-message').text('Arquivos enviados com sucesso!').removeClass('text-gray-700').addClass('text-green-600');
+          $('#upload-progress-bar').addClass('bg-green-500'); // Change bar to green for success
+          $('#upload-percentage').addClass('text-green-600');
+
+          if (uploadedFiles && uploadedFiles.length > 0) {
+            $('#upload-result').html('Arquivos processados: ' + uploadedFiles.join(', ')).show();
+          } else {
+            $('#upload-result').html('Nenhum arquivo foi processado.').show();
+          }
+
+          // Optionally hide progress bar after a delay
+          // setTimeout(function() {
+          //   $('#upload-progress-section').hide();
+          // }, 5000);
         },
-        error: function() {
-          alert('Erro ao enviar arquivos');
+        error: function(jqXHR, textStatus, errorThrown) {
+          let errorMessage = 'Erro ao enviar arquivos.';
+          if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+            errorMessage = jqXHR.responseJSON.error;
+          } else if (errorThrown) {
+            errorMessage = errorThrown;
+          }
+          $('#upload-status-message').text(errorMessage).removeClass('text-gray-700').addClass('text-red-500');
+          $('#upload-progress-bar').css('width', '100%').removeClass('bg-blue-600').addClass('bg-red-500'); // Show error on progress bar
+          $('#upload-percentage').text('Falha').removeClass('text-blue-600').addClass('text-red-500');
+          $('#upload-result').html(errorMessage).addClass('text-red-500').show();
+
+          // Optionally hide progress bar after a delay
+          // setTimeout(function() {
+          //  $('#upload-progress-section').hide();
+          // }, 5000);
         }
       });
     });
 
     $('#process-btn').click(function() {
+      $('#processing-indicator').show();
+      $('#process-message-area').hide().removeClass('bg-red-100 text-red-700 border-red-300'); // Clear previous messages
+      $('#result-table').empty(); // Clear previous results table
+
       if (uploadedFiles.length === 0) {
-        alert('Envie os arquivos primeiro.');
+        //alert('Envie os arquivos primeiro.');
+        $('#process-message-area')
+          .html('Por favor, envie os arquivos PDF primeiro.')
+          .addClass('bg-red-100 border border-red-300 text-red-700 p-3')
+          .show();
+        $('#processing-indicator').hide();
         return;
       }
       const model = $('#model-select').val();
@@ -71,11 +145,17 @@
         contentType: 'application/json',
         data: JSON.stringify({ filenames: uploadedFiles, model: model }),
         success: function(data) {
+          $('#processing-indicator').hide();
           window.extractedData = data.data;
           renderTable(data.data);
         },
-        error: function() {
-          alert('Erro ao processar convidados.');
+        error: function(jqXHR, textStatus, errorThrown) {
+          $('#processing-indicator').hide();
+          let errorMessage = 'Ocorreu um erro ao processar os dados dos convidados. Por favor, tente novamente.';
+          if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+            errorMessage = jqXHR.responseJSON.error; // This message should be in Portuguese from app.py
+          }
+           $('#result-table').html('<p class="p-4 text-red-500">' + errorMessage + '</p>');
         }
       });
     });
@@ -107,7 +187,7 @@
 
     function renderTable(data) {
       if (!Array.isArray(data) || data.length === 0) {
-        $('#result-table').html('<p>Nenhum dado disponível.</p>');
+        $('#result-table').html('<p class="p-4 text-gray-700">Nenhum dado disponível para exibição.</p>');
         return;
       }
       
@@ -115,20 +195,20 @@
       const items = Array.isArray(data[0]) ? data[0] : data;
       
       const headers = ['Pronome', 'Nome', 'Cargo', 'Entidade', 'Observações'];
-      let html = `<table>
-        <thead>
+      let html = `<table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
           <tr>
-            ${headers.map(h => `<th>${h}</th>`).join('')}
+            ${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${h}</th>`).join('')}
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-white divide-y divide-gray-200">
           ${items.map(item => `
             <tr>
-              <td>${item.pronome || ''}</td>
-              <td>${item.nome || ''}</td>
-              <td>${item.cargo || ''}</td>
-              <td>${item.entidade || ''}</td>
-              <td>${item.observacoes || ''}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.pronome || ''}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.nome || ''}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.cargo || ''}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.entidade || ''}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.observacoes || ''}</td>
             </tr>
           `).join('')}
         </tbody>
