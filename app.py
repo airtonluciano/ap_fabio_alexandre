@@ -114,7 +114,7 @@ def clear_uploaded_pdfs():
         return jsonify({'message': 'Diretório de uploads não encontrado.', 'errors': True}), 404
 
     for filename in os.listdir(upload_folder):
-        if filename.lower().endswith('.pdf'):
+        if filename.lower().endswith('.pdf') or filename.lower().endswith('.xlsx'):
             filepath = os.path.join(upload_folder, filename)
             try:
                 os.remove(filepath)

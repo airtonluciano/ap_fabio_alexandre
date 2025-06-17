@@ -254,8 +254,9 @@
 
       // Body rows
       $(table).find('tbody tr').each(function() {
-        $(this).find('td').each(function(index, cell) {
-          textRepresentation += $(cell).text().trim() + (index < $(this).find('td').length - 1 ? '\t' : '');
+        const $row = $(this); // Armazena a referência da linha atual
+        $row.find('td').each(function(index, cell) {
+          textRepresentation += $(cell).text().trim() + (index < $row.find('td').length - 1 ? '\t' : '');
         });
         textRepresentation += '\r\n'; // Use \r\n for line ending
       });
