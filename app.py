@@ -96,12 +96,41 @@ def export():
     if not isinstance(data, list):
         return jsonify({"error": "Formato inválido: esperado uma lista de objetos JSON"}), 400
 
-    df = pd.DataFrame(data)
+    column_order = ['pronome', 'nome', 'cargo', 'entidade', 'observacoes']
+    df = pd.DataFrame(data, columns=column_order)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = f"convidados_{timestamp}.xlsx"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     export_to_excel(df, filepath)
     return send_file(filepath, as_attachment=True)
+
+@app.route('/clear_uploaded_pdfs', methods=['POST'])
+def clear_uploaded_pdfs():
+    deleted_count = 0
+    error_count = 0
+    upload_folder = app.config['UPLOAD_FOLDER']
+
+    if not os.path.exists(upload_folder):
+        return jsonify({'message': 'Diretório de uploads não encontrado.', 'errors': True}), 404
+
+    for filename in os.listdir(upload_folder):
+        if filename.lower().endswith('.pdf') or filename.lower().endswith('.xlsx'):
+            filepath = os.path.join(upload_folder, filename)
+            try:
+                os.remove(filepath)
+                deleted_count += 1
+            except Exception as e:
+                print(f"Erro ao remover {filepath}: {e}")
+                error_count += 1
+
+    message = f"{deleted_count} arquivos PDF foram removidos."
+    if error_count > 0:
+        message += f" Ocorreram {error_count} erros ao tentar remover alguns arquivos."
+
+    if deleted_count == 0 and error_count == 0:
+        message = "Nenhum arquivo PDF encontrado para remover."
+
+    return jsonify({'message': message, 'errors': error_count > 0})
 
 if __name__ == '__main__':
     app.run(debug=True)
