@@ -27,6 +27,13 @@
 
     <div id="upload-result" class="mt-4 p-4 bg-white rounded-md shadow" style="display: none;"></div>
 
+    <div class="mt-6">
+      <button id="clear-pdfs-btn" class="py-2 px-4 bg-red-500 hover:bg-red-600 text-white text-sm rounded-md transition-colors">
+        Limpar PDFs Enviados
+      </button>
+      <p id="clear-pdfs-status-message" class="text-sm h-4 mt-2"></p>
+    </div>
+
     <h3 class="text-xl font-semibold mt-6 mb-3">2. Escolher modelo</h3>
     <select id="model-select" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-4">
       {% for model in models %}
@@ -47,7 +54,13 @@
     <h3 class="text-xl font-semibold mt-6 mb-3">4. Exportar para Excel</h3>
     <button id="export-btn" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md transition-colors mb-4">Exportar</button>
 
-    <h3 class="text-xl font-semibold mt-6 mb-3">Resultado</h3>
+    <div class="flex items-center justify-between mt-6 mb-3">
+      <h3 class="text-xl font-semibold">Resultado</h3>
+      <button id="copy-table-btn" class="py-1 px-3 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition-colors">
+        Copiar Tabela
+      </button>
+    </div>
+    <p id="copy-status-message" class="text-sm h-4 mb-2"></p> <!-- For feedback -->
     <div id="result-table" class="mt-4 bg-white rounded-md shadow overflow-x-auto"></div>
   </div>
 
@@ -190,6 +203,8 @@
         $('#result-table').html('<p class="p-4 text-gray-700">Nenhum dado disponível para exibição.</p>');
         return;
       }
+      // Clear previous copy status message when new table is rendered
+      $('#copy-status-message').text('');
       
       // Ensure we're using the array from the model response
       const items = Array.isArray(data[0]) ? data[0] : data;
@@ -216,6 +231,93 @@
       
       $('#result-table').html(html);
     }
+
+    $('#copy-table-btn').click(function() {
+      const copyStatusMessage = $('#copy-status-message');
+      copyStatusMessage.text(''); // Clear previous message
+
+      const table = $('#result-table').find('table')[0];
+
+      if (!table) {
+        copyStatusMessage.text('Nenhuma tabela para copiar.').addClass('text-red-500').removeClass('text-green-600');
+        setTimeout(() => copyStatusMessage.text('').removeClass('text-red-500'), 3000);
+        return;
+      }
+
+      let textRepresentation = '';
+
+      // Headers
+      $(table).find('thead tr th').each(function(index, header) {
+        textRepresentation += $(header).text().trim() + (index < $(table).find('thead tr th').length - 1 ? '\t' : '');
+      });
+      textRepresentation += '\n';
+
+      // Body rows
+      $(table).find('tbody tr').each(function() {
+        $(this).find('td').each(function(index, cell) {
+          textRepresentation += $(cell).text().trim() + (index < $(this).find('td').length - 1 ? '\t' : '');
+        });
+        textRepresentation += '\n';
+      });
+
+      if (textRepresentation.trim() === '' || $(table).find('tbody tr').length === 0) {
+          copyStatusMessage.text('Tabela vazia, nada para copiar.').addClass('text-yellow-600').removeClass('text-green-600 text-red-500');
+          setTimeout(() => copyStatusMessage.text('').removeClass('text-yellow-600'), 3000);
+          return;
+      }
+
+      navigator.clipboard.writeText(textRepresentation.trim()).then(function() {
+        copyStatusMessage.text('Tabela copiada!').addClass('text-green-600').removeClass('text-red-500');
+        const originalButtonText = $('#copy-table-btn').text();
+        $('#copy-table-btn').text('Copiado!');
+        setTimeout(() => {
+          copyStatusMessage.text('').removeClass('text-green-600');
+          $('#copy-table-btn').text(originalButtonText);
+        }, 3000);
+      }).catch(function(err) {
+        copyStatusMessage.text('Erro ao copiar.').addClass('text-red-500').removeClass('text-green-600');
+        console.error('Erro ao copiar tabela: ', err);
+        setTimeout(() => copyStatusMessage.text('').removeClass('text-red-500'), 3000);
+      });
+    });
+
+    $('#clear-pdfs-btn').click(function() {
+      const clearStatusMessage = $('#clear-pdfs-status-message');
+      clearStatusMessage.text('').removeClass('text-green-600 text-red-500'); // Clear previous message and styles
+
+      if (confirm("Tem certeza que deseja remover todos os arquivos PDF enviados? Esta ação não pode ser desfeita.")) {
+        $.ajax({
+          url: '/clear_uploaded_pdfs',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({}), // Empty JSON object
+          success: function(response) {
+            clearStatusMessage.text(response.message);
+            if (response.errors) {
+              clearStatusMessage.addClass('text-red-500');
+            } else {
+              clearStatusMessage.addClass('text-green-600');
+            }
+            // Also clear the list of uploaded files in the UI and the `uploadedFiles` array
+            $('#upload-result').html('').hide();
+            uploadedFiles = [];
+            $('#upload-status-message').text('Pronto para novo envio.');
+            $('#upload-progress-section').hide();
+
+
+            setTimeout(() => {
+              clearStatusMessage.text('').removeClass('text-green-600 text-red-500');
+            }, 5000); // Keep message for 5 seconds
+          },
+          error: function() {
+            clearStatusMessage.text('Erro ao tentar limpar os arquivos PDF.').addClass('text-red-500');
+            setTimeout(() => {
+              clearStatusMessage.text('').removeClass('text-red-500');
+            }, 3000);
+          }
+        });
+      }
+    });
   </script>
 </body>
 </html>
