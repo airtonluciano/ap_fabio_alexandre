@@ -1,0 +1,17 @@
+[
+    {
+        "id": "google/gemma-3-27b-it:free",
+        "name": "Google: Gemma 3 27B (free)",
+        "provider": "Google"
+    },
+    {
+        "id": "qwen/qwen3-14b:free",
+        "name": "Qwen: Qwen3 14B (free)",
+        "provider": "Qwen"
+    },
+    {
+        "id": "deepseek/deepseek-chat:free",
+        "name": "DeepSeek: DeepSeek V3 (free)",
+        "provider": "DeepSeek"
+    }
+]

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Extrator de Convidados - Requerimentos</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Extrator de Convidados</h1>
+
+  <h3>1. Enviar arquivos PDF</h3>
+  <form id="upload-form" enctype="multipart/form-data">
+    <input type="file" name="files[]" multiple accept=".pdf" />
+    <button type="submit">Enviar</button>
+  </form>
+
+  <div id="upload-result"></div>
+
+  <h3>2. Escolher modelo</h3>
+  <select id="model-select">
+    {% for model in models %}
+      <option value="{{ model.id }}">{{ model.name }}</option>
+    {% endfor %}
+  </select>
+
+  <h3>3. Processar convidados</h3>
+  <button id="process-btn">Processar</button>
+
+  <h3>4. Exportar para Excel</h3>
+  <button id="export-btn">Exportar</button>
+
+  <h3>Resultado</h3>
+  <div id="result-table"></div>
+
+  <script>
+    let uploadedFiles = [];
+
+    $('#upload-form').submit(function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      $.ajax({
+        url: '/upload',
+        method: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(res) {
+          uploadedFiles = res.uploaded;
+          $('#upload-result').html('Arquivos enviados: ' + uploadedFiles.join(', '));
+        },
+        error: function() {
+          alert('Erro ao enviar arquivos');
+        }
+      });
+    });
+
+    $('#process-btn').click(function() {
+      if (uploadedFiles.length === 0) {
+        alert('Envie os arquivos primeiro.');
+        return;
+      }
+      const model = $('#model-select').val();
+      $.ajax({
+        url: '/process',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ filenames: uploadedFiles, model: model }),
+        success: function(data) {
+          window.extractedData = data.data;
+          renderTable(data.data);
+        },
+        error: function() {
+          alert('Erro ao processar convidados.');
+        }
+      });
+    });
+
+    $('#export-btn').click(function() {
+      if (!Array.isArray(window.extractedData) || window.extractedData.length === 0) {
+        alert('Nenhum dado para exportar. Primeiro processe os arquivos.');
+        return;
+      }
+      $.ajax({
+        url: '/export',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(window.extractedData),
+        xhrFields: {
+          responseType: 'blob'
+        },
+        success: function(blob) {
+          const link = document.createElement('a');
+          link.href = window.URL.createObjectURL(blob);
+          link.download = 'convidados.xlsx';
+          link.click();
+        },
+        error: function() {
+          alert('Erro ao exportar arquivo Excel.');
+        }
+      });
+    });
+
+    function renderTable(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        $('#result-table').html('<p>Nenhum dado disponível.</p>');
+        return;
+      }
+      
+      // Ensure we're using the array from the model response
+      const items = Array.isArray(data[0]) ? data[0] : data;
+      
+      const headers = ['Pronome', 'Nome', 'Cargo', 'Entidade', 'Observações'];
+      let html = `<table>
+        <thead>
+          <tr>
+            ${headers.map(h => `<th>${h}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td>${item.pronome || ''}</td>
+              <td>${item.nome || ''}</td>
+              <td>${item.cargo || ''}</td>
+              <td>${item.entidade || ''}</td>
+              <td>${item.observacoes || ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+      
+      $('#result-table').html(html);
+    }
+  </script>
+</body>
+</html>
