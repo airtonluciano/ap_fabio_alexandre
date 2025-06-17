@@ -250,14 +250,14 @@
       $(table).find('thead tr th').each(function(index, header) {
         textRepresentation += $(header).text().trim() + (index < $(table).find('thead tr th').length - 1 ? '\t' : '');
       });
-      textRepresentation += '\n';
+      textRepresentation += '\r\n'; // Use \r\n for line ending
 
       // Body rows
       $(table).find('tbody tr').each(function() {
         $(this).find('td').each(function(index, cell) {
           textRepresentation += $(cell).text().trim() + (index < $(this).find('td').length - 1 ? '\t' : '');
         });
-        textRepresentation += '\n';
+        textRepresentation += '\r\n'; // Use \r\n for line ending
       });
 
       if (textRepresentation.trim() === '' || $(table).find('tbody tr').length === 0) {
