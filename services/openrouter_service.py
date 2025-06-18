@@ -38,6 +38,7 @@ def extract_guests_data(pdf_text, model_name):
                     - cargo: Descrição do cargo ou qualificações
                     - entidade: Organização/instituição que representa
                     - observacoes: Contexto da menção no documento
+                    - autores: Nome(s) do(s) deputado(s) autor(es) do requerimento. Se não houver nome explícito, use 'Não identificado(s)'.
 
                   IMPORTANTE:
                     - Mantenha cada entrada mesmo com dados parciais.
@@ -54,7 +55,8 @@ def extract_guests_data(pdf_text, model_name):
                       "nome": "Representante não especificado",
                       "cargo": "Produtor rural",
                       "entidade": "Associação de Agricultores",
-                      "observacoes": "Mencionado genericamente no contexto do debate"
+                      "observacoes": "Mencionado genericamente no contexto do debate",
+                      "autores": "Nome(s) do(s) deputado(s) autor(es) do requerimento"
                     },
                     {
                       "genero": "Não identificado",

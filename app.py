@@ -86,7 +86,7 @@ def process_files():
     
     return jsonify({
         "data": safe_data,
-        "columns": ["pronome", "nome", "cargo", "entidade", "observacoes"]
+        "columns": ["pronome", "nome", "cargo", "entidade", "observacoes", "autores"]
     })
 
 @app.route('/export', methods=['POST'])
@@ -96,7 +96,7 @@ def export():
     if not isinstance(data, list):
         return jsonify({"error": "Formato inválido: esperado uma lista de objetos JSON"}), 400
 
-    column_order = ['pronome', 'nome', 'cargo', 'entidade', 'observacoes']
+    column_order = ['pronome', 'nome', 'cargo', 'entidade', 'observacoes', 'autores']
     df = pd.DataFrame(data, columns=column_order)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = f"convidados_{timestamp}.xlsx"
