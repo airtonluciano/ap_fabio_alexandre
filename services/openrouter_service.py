@@ -80,11 +80,11 @@ def extract_guests_data(pdf_text, model_name):
         )
         
         response = completion.choices[0].message.content
-        print(f"Resposta bruta do modelo: {response}")
+        #debug print(f"Resposta bruta do modelo: {response}")
         
         # Limpar a resposta removendo blocos de código markdown
         cleaned_response = clean_json_response(response)
-        print(f"Resposta limpa: {cleaned_response}")
+        #debug print(f"Resposta limpa: {cleaned_response}")
         
         # Validar se o response é um JSON válido
         try:
