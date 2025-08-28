@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import json
 import time
 import sys
+import re
 
 # Definir caminho base sem depender de __file__
 BASE_DIR = os.getcwd()
@@ -32,6 +33,21 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def correct_reversed_text(text):
+    """
+    Corrige o texto extraído de PDFs onde algumas linhas podem estar invertidas
+    devido à formatação vertical.
+    """
+    lines = text.split('\n')
+    corrected_lines = []
+    for line in lines:
+        # Inverte linhas que parecem ser o número do requerimento ou a palavra "REQ" em inglês
+        if re.search(r'\d{4}/\d+\.n', line) or 'QER' in line.upper():
+            corrected_lines.append(line[::-1])
+        else:
+            corrected_lines.append(line)
+    return '\n'.join(corrected_lines)
 
 @app.route('/')
 def index():
@@ -63,9 +79,19 @@ def process_files():
         if text is None:
             print(f"Erro: Falha na extração de texto de {filename}")
             continue
+
+        # Corrige o texto antes de salvar e enviar para o modelo
+        corrected_text = correct_reversed_text(text)
+
+        # Salvar o texto corrigido em um arquivo .txt para depuração
+        txt_filename = os.path.splitext(filename)[0] + '_corrigido.txt'
+        txt_filepath = os.path.join(app.config['UPLOAD_FOLDER'], txt_filename)
+        with open(txt_filepath, 'w', encoding='utf-8') as txt_file:
+            txt_file.write(corrected_text)
             
         try:
-            guests = extract_guests_data(text, model)
+            # Envia o texto corrigido para o modelo
+            guests = extract_guests_data(corrected_text, model)
             if not guests:
                 print(f"Aviso: Nenhum convidado extraído de {filename}")
                 continue
@@ -86,7 +112,7 @@ def process_files():
     
     return jsonify({
         "data": safe_data,
-        "columns": ["pronome", "nome", "cargo", "entidade", "observacoes", "autores"]
+        "columns": ["requerimento", "pronome", "nome", "cargo", "entidade", "observacoes", "autores"]
     })
 
 @app.route('/export', methods=['POST'])
@@ -96,7 +122,7 @@ def export():
     if not isinstance(data, list):
         return jsonify({"error": "Formato inválido: esperado uma lista de objetos JSON"}), 400
 
-    column_order = ['autores', 'pronome', 'nome', 'cargo', 'entidade', 'observacoes']
+    column_order = ['requerimento', 'autores', 'pronome', 'nome', 'cargo', 'entidade', 'observacoes']
     df = pd.DataFrame(data, columns=column_order)
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = f"convidados_{timestamp}.xlsx"
@@ -114,7 +140,7 @@ def clear_uploaded_pdfs():
         return jsonify({'message': 'Diretório de uploads não encontrado.', 'errors': True}), 404
 
     for filename in os.listdir(upload_folder):
-        if filename.lower().endswith('.pdf') or filename.lower().endswith('.xlsx'):
+        if filename.lower().endswith(('.pdf', '.xlsx', '.txt')):
             filepath = os.path.join(upload_folder, filename)
             try:
                 os.remove(filepath)

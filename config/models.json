@@ -10,8 +10,13 @@
         "provider": "Qwen"
     },
     {
-        "id": "deepseek/deepseek-chat:free",
-        "name": "DeepSeek: DeepSeek V3 (free)",
-        "provider": "DeepSeek"
+        "id": "z-ai/glm-4.5-air:free",
+        "name": "Z.AI: GLM 4.5 Air (free)",
+        "provider": "Z.Ai"
+    },
+    {
+        "id": "tencent/hunyuan-a13b-instruct:free",
+        "name": "Tencent: Hunyuan A13B Instruct (free)",
+        "provider": "Tencent"
     }
 ]

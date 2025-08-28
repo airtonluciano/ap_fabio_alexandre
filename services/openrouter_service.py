@@ -32,6 +32,7 @@ def extract_guests_data(pdf_text, model_name):
                   Os arquivos que você recebe são referentes a requerimentos de audiências públicas no parlamento. Desses arquivos, você deve extrair uma relação de convidados para o debate proposto e se limitará a retornar os convidados explicitamente mencionados.
 
                   Para cada convidado, você vai tentar identificar:
+                    - requerimento: Número do requerimento (ex: "REQ n.123/2024"). Se não encontrar, use "Não identificado".
                     - genero: Inferir quando possível ("M", "F" ou "Não identificado")
                     - pronome: Se não estiver especificado, usar "Sr." ou "Sra.", de acordo com o gênero, ou "Não identificado"
                     - nome: Se não houver nome explícito, use "Representante não especificado"
@@ -42,6 +43,7 @@ def extract_guests_data(pdf_text, model_name):
 
                   IMPORTANTE:
                     - Mantenha cada entrada mesmo com dados parciais.
+                    - O campo 'requerimento' e 'autores' devem ser os mesmos para todos os convidados de um mesmo arquivo processado.
                     - Retorne apenas um array JSON válido.
                     - Não escreva explicações, apenas o JSON.
                     - Use aspas duplas no JSON.
@@ -50,17 +52,20 @@ def extract_guests_data(pdf_text, model_name):
 
                   [
                     {
-                      "pronome": "Sr./Sra.",
-                      "genero": "Não identificado",
-                      "nome": "Representante não especificado",
+                      "requerimento": "REQ n.9/2025",
+                      "autores": "Deputado João Pedra",
+                      "pronome": "Sr.",
+                      "genero": "M",
+                      "nome": "José Silva",
                       "cargo": "Produtor rural",
                       "entidade": "Associação de Agricultores",
-                      "observacoes": "Mencionado genericamente no contexto do debate",
-                      "autores": "Nome(s) do(s) deputado(s) autor(es) do requerimento"
+                      "observacoes": "Mencionado genericamente no contexto do debate"                      
                     },
                     {
-                      "genero": "Não identificado",
+                      "requerimento": "REQ n.9/2025",
+                      "autores": "Deputado João Pedra",
                       "pronome": "Sr./Sra.",
+                      "genero": "Não identificado",
                       "nome": "Representante não especificado",
                       "cargo": "Líder comunitário",
                       "entidade": "Comunidades tradicionais",
@@ -72,7 +77,7 @@ def extract_guests_data(pdf_text, model_name):
                 {
                     "role": "user",
                     "content": f"""
-                        Extraia os convidados desses requerimentos de audiência pública.
+                        Extraia os dados dos números dos requerimentos, seus autores e os dados dos convidados desses requerimentos de audiência pública.
                         Texto do requerimento: {pdf_text}
                         """
                 }
